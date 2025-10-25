@@ -183,6 +183,29 @@ body {
   100% { transform: rotate(360deg); }
 }
 
+.feedback {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.feedback p {
+  margin: 0;
+  font-size: 1.1em;
+}
+
+.correct-feedback {
+  background: #4CAF50;
+  color: white;
+}
+
+.feedback:not(.correct-feedback) {
+  background: #f44336;
+  color: white;
+}
+
 @media (max-width: 768px) {
   .App {
     padding: 10px;

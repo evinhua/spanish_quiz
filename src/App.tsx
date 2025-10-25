@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
 interface Question {
@@ -42,7 +42,7 @@ function App() {
     return question;
   };
 
-  const loadNextQuestion = async () => {
+  const loadNextQuestion = useCallback(async () => {
     setLoading(true);
     try {
       const question = await generateQuestion();
@@ -51,9 +51,9 @@ function App() {
       console.error('Error loading question:', error);
     }
     setLoading(false);
-  };
+  }, []);
 
-  const startGame = async () => {
+  const startGame = useCallback(async () => {
     setQuestionNumber(1);
     setScore(0);
     setCorrectAnswers(0);
@@ -62,7 +62,7 @@ function App() {
     setSelectedAnswer(null);
     setShowResult(false);
     await loadNextQuestion();
-  };
+  }, [loadNextQuestion]);
 
   const handleAnswer = (answerIndex: number) => {
     if (showResult || !currentQuestion) return;
@@ -79,30 +79,51 @@ function App() {
       } else if (attempts === 1) {
         setScore(prev => prev + 1);
       }
-    }
-    
-    setTimeout(async () => {
-      if (questionNumber < 10) {
-        setQuestionNumber(prev => prev + 1);
-        setAttempts(0);
-        setSelectedAnswer(null);
-        setShowResult(false);
-        await loadNextQuestion();
+      
+      // Move to next question after correct answer
+      setTimeout(async () => {
+        if (questionNumber < 10) {
+          setQuestionNumber(prev => prev + 1);
+          setAttempts(0);
+          setSelectedAnswer(null);
+          setShowResult(false);
+          await loadNextQuestion();
+        } else {
+          setGameFinished(true);
+        }
+      }, 2000);
+    } else {
+      // Wrong answer - check if they can try again
+      if (attempts === 0) {
+        // First wrong attempt - they get another try
+        setTimeout(() => {
+          setAttempts(1);
+          setSelectedAnswer(null);
+          setShowResult(false);
+        }, 1500);
       } else {
-        setGameFinished(true);
+        // Second wrong attempt - move to next question
+        setTimeout(async () => {
+          if (questionNumber < 10) {
+            setQuestionNumber(prev => prev + 1);
+            setAttempts(0);
+            setSelectedAnswer(null);
+            setShowResult(false);
+            await loadNextQuestion();
+          } else {
+            setGameFinished(true);
+          }
+        }, 2000);
       }
-    }, 2000);
-  };
-
-  const handleWrongAnswer = () => {
-    setAttempts(prev => prev + 1);
-    setSelectedAnswer(null);
-    setShowResult(false);
+    }
   };
 
   useEffect(() => {
-    startGame();
-  }, []);
+    const initGame = async () => {
+      await startGame();
+    };
+    initGame();
+  }, [startGame]);
 
   if (loading) {
     return (
@@ -140,6 +161,7 @@ function App() {
         <h1>Quiz de Gramática Española B1</h1>
         <div className="progress">
           Pregunta {questionNumber}/10 | Puntuación: {score}
+          {attempts > 0 && <span> | Intento: {attempts + 1}/2</span>}
         </div>
       </header>
       
@@ -153,11 +175,13 @@ function App() {
               onClick={() => handleAnswer(index)}
               className={`option ${
                 showResult
-                  ? index === currentQuestion.correct
-                    ? 'correct'
-                    : selectedAnswer === index
-                    ? 'incorrect'
-                    : ''
+                  ? selectedAnswer === index
+                    ? index === currentQuestion.correct
+                      ? 'correct'
+                      : 'incorrect'
+                    : (attempts === 1 && selectedAnswer !== currentQuestion.correct && index === currentQuestion.correct)
+                      ? 'correct'
+                      : ''
                   : ''
               }`}
               disabled={showResult}
@@ -167,10 +191,22 @@ function App() {
           ))}
         </div>
         
-        {showResult && selectedAnswer !== currentQuestion.correct && attempts < 2 && (
-          <button onClick={handleWrongAnswer} className="try-again">
-            Intentar de Nuevo
-          </button>
+        {showResult && selectedAnswer !== currentQuestion.correct && attempts === 0 && (
+          <div className="feedback">
+            <p>Incorrecto. Tendrás otra oportunidad...</p>
+          </div>
+        )}
+        
+        {showResult && selectedAnswer !== currentQuestion.correct && attempts === 1 && (
+          <div className="feedback">
+            <p>Incorrecto de nuevo. La respuesta correcta era: {currentQuestion.options[currentQuestion.correct]}</p>
+          </div>
+        )}
+        
+        {showResult && selectedAnswer === currentQuestion.correct && (
+          <div className="feedback correct-feedback">
+            <p>¡Correcto! {attempts === 0 ? '+3 puntos' : '+1 punto'}</p>
+          </div>
         )}
       </div>
     </div>
