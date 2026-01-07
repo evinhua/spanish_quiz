@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Spanish Quiz App with Bedrock Claude Sonnet 4.5'
+
+Parameters:
+  AppName:
+    Type: String
+    Default: spanish-quiz
+    Description: Application name
+
+Resources:
+  # IAM Role for Elastic Beanstalk
+  EBServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: elasticbeanstalk.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSElasticBeanstalkEnhancedHealth
+        - arn:aws:iam::aws:policy/AWSElasticBeanstalkManagedUpdatesCustomerRolePolicy
+
+  # IAM Role for EC2 instances
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EC2Role
+
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier
+        - arn:aws:iam::aws:policy/AWSElasticBeanstalkMulticontainerDocker
+      Policies:
+        - PolicyName: BedrockAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: 
+                  - arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-sonnet-20250106-v1:0
+
+  # Elastic Beanstalk Application
+  EBApplication:
+    Type: AWS::ElasticBeanstalk::Application
+    Properties:
+      ApplicationName: !Ref AppName
+      Description: Spanish Quiz Application
+
+  # Elastic Beanstalk Environment
+  EBEnvironment:
+    Type: AWS::ElasticBeanstalk::Environment
+    Properties:
+      ApplicationName: !Ref EBApplication
+      EnvironmentName: !Sub "${AppName}-env"
+      SolutionStackName: "64bit Amazon Linux 2 v3.4.19 running Docker"
+      OptionSettings:
+        - Namespace: aws:autoscaling:launchconfiguration
+          OptionName: IamInstanceProfile
+          Value: !Ref EC2InstanceProfile
+        - Namespace: aws:elasticbeanstalk:environment
+          OptionName: ServiceRole
+          Value: !Ref EBServiceRole
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: AWS_REGION
+          Value: !Ref AWS::Region
+        - Namespace: aws:elasticbeanstalk:application:environment
+          OptionName: NODE_ENV
+          Value: production
+
+Outputs:
+  ApplicationURL:
+    Description: URL of the Elastic Beanstalk application
+    Value: !GetAtt EBEnvironment.EndpointURL
+    Export:
+      Name: !Sub "${AWS::StackName}-URL"

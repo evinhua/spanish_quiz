@@ -1,18 +1,4 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
 const { BedrockRuntimeClient, InvokeModelCommand } = require('@aws-sdk/client-bedrock-runtime');
-
-const app = express();
-const PORT = process.env.PORT || 3001;
-
-app.use(cors());
-app.use(express.json());
-
-// Serve static files from React build
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'build')));
-}
 
 const bedrockClient = new BedrockRuntimeClient({ 
   region: process.env.AWS_REGION || 'us-east-1' 
@@ -36,7 +22,18 @@ const grammarTopics = [
   'gerundio vs infinitivo'
 ];
 
-app.post('/api/generate-question', async (req, res) => {
+exports.handler = async (event) => {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'application/json'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
+
   try {
     const randomTopic = grammarTopics[Math.floor(Math.random() * grammarTopics.length)];
     
@@ -59,44 +56,41 @@ app.post('/api/generate-question', async (req, res) => {
     const responseBody = JSON.parse(new TextDecoder().decode(response.body));
     let content = responseBody.content[0].text;
     
-    // Clean up the response to extract JSON
     content = content.replace(/```json/g, '').replace(/```/g, '').trim();
     
     try {
       const parsed = JSON.parse(content);
       
-      // Validate the structure
       if (parsed.question && Array.isArray(parsed.options) && parsed.options.length === 4 && typeof parsed.correct === 'number') {
-        res.json(parsed);
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(parsed)
+        };
       } else {
         throw new Error('Invalid structure');
       }
     } catch (parseError) {
-      console.log('Parse error, using fallback. Content was:', content);
-      res.json({
-        question: `¿Cuál es la forma correcta? (${randomTopic})`,
-        options: ["Primera opción", "Segunda opción", "Tercera opción", "Cuarta opción"],
-        correct: Math.floor(Math.random() * 4)
-      });
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          question: `¿Cuál es la forma correcta? (${randomTopic})`,
+          options: ["Primera opción", "Segunda opción", "Tercera opción", "Cuarta opción"],
+          correct: Math.floor(Math.random() * 4)
+        })
+      };
     }
   } catch (error) {
     console.error('Bedrock Error:', error);
-    const randomTopic = grammarTopics[Math.floor(Math.random() * grammarTopics.length)];
-    res.json({
-      question: `Error: pregunta sobre ${randomTopic}`,
-      options: ["Opción A", "Opción B", "Opción C", "Opción D"],
-      correct: Math.floor(Math.random() * 4)
-    });
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        question: `¿Cuál es la forma correcta del verbo 'ser' en primera persona del presente?`,
+        options: ["soy", "eres", "es", "somos"],
+        correct: 0
+      })
+    };
   }
-});
-
-// Serve React app for all other routes in production
-if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));
-  });
-}
-
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+};

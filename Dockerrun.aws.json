@@ -1,0 +1,27 @@
+{
+  "AWSEBDockerrunVersion": 2,
+  "containerDefinitions": [
+    {
+      "name": "spanish-quiz",
+      "image": "spanish-quiz:latest",
+      "essential": true,
+      "memory": 512,
+      "portMappings": [
+        {
+          "hostPort": 80,
+          "containerPort": 3001
+        }
+      ],
+      "environment": [
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-1"
+        },
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        }
+      ]
+    }
+  ]
+}

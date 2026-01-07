@@ -19,11 +19,9 @@ function App() {
   const [showResult, setShowResult] = useState(false);
 
   const generateQuestion = async (): Promise<Question> => {
-    const response = await fetch('http://localhost:3001/api/generate-question', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+    const apiUrl = 'https://rzqrx5wwuc.execute-api.us-east-1.amazonaws.com/prod';
+    const response = await fetch(`${apiUrl}/api/generate-question`, {
+      method: 'POST'
     });
 
     const question = await response.json();

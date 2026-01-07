@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.962.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.490.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",

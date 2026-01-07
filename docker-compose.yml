@@ -1,0 +1,9 @@
+version: '3'
+services:
+  spanish-quiz:
+    build: .
+    ports:
+      - "80:3001"
+    environment:
+      - AWS_REGION=us-east-1
+      - NODE_ENV=production

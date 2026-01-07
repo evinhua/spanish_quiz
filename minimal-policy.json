@@ -1,0 +1,21 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "cloudformation:*",
+                "iam:CreateRole",
+                "iam:DeleteRole",
+                "iam:AttachRolePolicy",
+                "iam:DetachRolePolicy",
+                "iam:PassRole",
+                "iam:GetRole",
+                "lambda:*",
+                "apigateway:*",
+                "bedrock:InvokeModel"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
